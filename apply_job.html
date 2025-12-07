@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply for Job - Job Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+            <div class="container">
+                <a class="navbar-brand" href="/">🎯 Job Portal</a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link" href="/jobs">Browse Jobs</a>
+                    {% if session.role == 'job_seeker' %}
+                    <a class="nav-link" href="/my-applications">My Applications</a>
+                    <a class="nav-link" href="/my-interviews">My Interviews</a>
+                    <a class="nav-link" href="/my-profile">My Profile</a>
+                    <a class="nav-link" href="/upload-resume">Upload Resume</a>
+                    <a class="nav-link" href="/notifications">Notifications</a>
+                    {% elif session.role == 'employer' %}
+                    <a class="nav-link" href="/my-jobs">My Jobs</a>
+                    <a class="nav-link" href="/add-job">Post Job</a>
+                    <a class="nav-link" href="/my-interviews">Scheduled Interviews</a>
+                    {% endif %}
+                </div>
+                <div class="navbar-nav">
+                    <span class="navbar-text text-white me-3">
+                        <strong>{{ session.full_name }}</strong> ({{ session.role|replace('_', ' ')|title }})
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <button class="btn btn-outline-light btn-sm">🚪 Logout</button>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="fas fa-file-import me-2"></i>Apply for Job</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Job Details -->
+                        {% if job %}
+                        <div class="alert alert-info">
+                            <h6>Job Details:</h6>
+                            <p class="mb-1"><strong>{{ job.title }}</strong></p>
+                            <p class="mb-1"><strong>Company:</strong> {{ job.company_name }}</p>
+                            <p class="mb-1"><strong>Location:</strong> {{ job.location }}</p>
+                            <p class="mb-0"><strong>Type:</strong> <span class="badge bg-primary">{{ job.job_type }}</span></p>
+                        </div>
+                        {% endif %}
+
+                        <form method="POST" enctype="multipart/form-data">
+                            <!-- Resume Upload Section -->
+                            <div class="mb-4">
+                                <h5><i class="fas fa-file-pdf me-2"></i>Resume</h5>
+                                
+                                {% if has_resume %}
+                                <div class="alert alert-success">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            <strong>Resume Available</strong>
+                                            <p class="mb-0 mt-1">You have a resume uploaded in your profile.</p>
+                                        </div>
+                                        <a href="/my-profile" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>View Profile
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="use_existing_resume" name="use_existing_resume" checked>
+                                    <label class="form-check-label" for="use_existing_resume">
+                                        <strong>Use my existing resume</strong>
+                                    </label>
+                                    <div class="form-text">Uncheck to upload a different resume for this application</div>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>No Resume Found</strong>
+                                            <p class="mb-0 mt-1">You haven't uploaded a resume yet.</p>
+                                        </div>
+                                        <a href="/upload-resume" class="btn btn-outline-warning btn-sm">
+                                            <i class="fas fa-upload me-1"></i>Upload Resume
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="mb-3" id="resumeUploadSection" {% if has_resume %}style="display: none;"{% endif %}>
+                                    <label for="resume" class="form-label">Upload Resume File</label>
+                                    <input type="file" class="form-control" id="resume" name="resume" 
+                                           accept=".pdf,.doc,.docx" {% if not has_resume %}required{% endif %}>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Supported formats: PDF, DOC, DOCX (Max 16MB)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cover Letter Section -->
+                            <div class="mb-4">
+                                <h5><i class="fas fa-edit me-2"></i>Cover Letter</h5>
+                                <div class="mb-3">
+                                    <label for="cover_letter" class="form-label">
+                                        Why are you interested in this position?
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="cover_letter" name="cover_letter" 
+                                              rows="6" placeholder="Tell us why you're a great fit for this role, highlight your relevant skills and experience..." required></textarea>
+                                    <div class="form-text">
+                                        <i class="fas fa-lightbulb me-1"></i>
+                                        Tip: Customize your cover letter for this specific job. Mention how your skills match the job requirements.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Application Tips -->
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-tips me-2"></i>Application Tips:</h6>
+                                <ul class="mb-0">
+                                    <li>Tailor your cover letter to this specific job</li>
+                                    <li>Highlight relevant skills and experience</li>
+                                    <li>Proofread for spelling and grammar errors</li>
+                                    <li>Keep your resume updated with current information</li>
+                                </ul>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-paper-plane me-2"></i>Submit Application
+                                </button>
+                                <div class="d-flex gap-2">
+                                    <a href="/jobs" class="btn btn-outline-secondary flex-fill">
+                                        <i class="fas fa-arrow-left me-2"></i>Back to Jobs
+                                    </a>
+                                    <a href="/my-profile" class="btn btn-outline-primary flex-fill">
+                                        <i class="fas fa-user me-2"></i>My Profile
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Quick Profile Check -->
+                <div class="card mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>Profile Completeness</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Complete Your Profile</h6>
+                                    <p class="mb-0">Employers are more likely to contact candidates with complete profiles.</p>
+                                </div>
+                                <a href="/my-profile" class="btn btn-primary">
+                                    <i class="fas fa-edit me-2"></i>Update Profile
+                                </a>
+                            </div>
+                        </div>
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <i class="fas fa-briefcase fa-2x text-primary mb-2"></i>
+                                <h6>Work Experience</h6>
+                                <small class="text-muted">Add your past jobs and roles</small>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-graduation-cap fa-2x text-primary mb-2"></i>
+                                <h6>Skills</h6>
+                                <small class="text-muted">List your technical and soft skills</small>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-file-alt fa-2x text-primary mb-2"></i>
+                                <h6>Resume</h6>
+                                <small class="text-muted">Keep your resume updated</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Show/hide resume upload based on checkbox
+        document.getElementById('use_existing_resume')?.addEventListener('change', function() {
+            const resumeUploadSection = document.getElementById('resumeUploadSection');
+            const resumeInput = document.getElementById('resume');
+            
+            if (this.checked) {
+                resumeUploadSection.style.display = 'none';
+                resumeInput.removeAttribute('required');
+            } else {
+                resumeUploadSection.style.display = 'block';
+                resumeInput.setAttribute('required', 'required');
+            }
+        });
+
+        // Character counter for cover letter
+        const coverLetter = document.getElementById('cover_letter');
+        if (coverLetter) {
+            // Create character counter
+            const counter = document.createElement('div');
+            counter.className = 'form-text text-end';
+            counter.id = 'charCounter';
+            counter.textContent = '0 characters';
+            coverLetter.parentNode.appendChild(counter);
+
+            coverLetter.addEventListener('input', function() {
+                const length = this.value.length;
+                const counterElement = document.getElementById('charCounter');
+                counterElement.textContent = `${length} characters`;
+                
+                if (length < 50) {
+                    counterElement.className = 'form-text text-end text-warning';
+                } else if (length > 1000) {
+                    counterElement.className = 'form-text text-end text-danger';
+                } else {
+                    counterElement.className = 'form-text text-end text-success';
+                }
+            });
+        }
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const coverLetter = document.getElementById('cover_letter').value;
+            if (coverLetter.length < 50) {
+                e.preventDefault();
+                alert('Please write a more detailed cover letter (at least 50 characters). This helps employers understand your interest in the position.');
+                return false;
+            }
+            
+            if (coverLetter.length > 2000) {
+                e.preventDefault();
+                alert('Cover letter is too long. Please keep it under 2000 characters.');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Reviews - Job Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+            <div class="container">
+                <a class="navbar-brand" href="/">🎯 Job Portal</a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link" href="/jobs">Browse Jobs</a>
+                    {% if session.role == 'job_seeker' %}
+                    <a class="nav-link" href="/my-applications">My Applications</a>
+                    <a class="nav-link" href="/my-interviews">My Interviews</a>
+                    <a class="nav-link" href="/my-profile">My Profile</a>
+                    <a class="nav-link" href="/upload-resume">Upload Resume</a>
+                    <a class="nav-link" href="/notifications">Notifications</a>
+                    {% elif session.role == 'employer' %}
+                    <a class="nav-link" href="/my-jobs">My Jobs</a>
+                    <a class="nav-link" href="/add-job">Post Job</a>
+                    <a class="nav-link" href="/my-interviews">Scheduled Interviews</a>
+                    {% endif %}
+                </div>
+                <div class="navbar-nav">
+                    <span class="navbar-text text-white me-3">
+                        <strong>{{ session.full_name }}</strong> ({{ session.role|replace('_', ' ')|title }})
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <button class="btn btn-outline-light btn-sm">🚪 Logout</button>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0"><i class="fas fa-building me-2"></i>{{ company.company_name }} - Reviews</h4>
+                            {% if session.role == 'job_seeker' and not user_has_reviewed %}
+                            <a href="/company/{{ company.employer_id }}/add-review" class="btn btn-light">
+                                <i class="fas fa-edit me-2"></i>Write a Review
+                            </a>
+                            {% elif session.role == 'job_seeker' and user_has_reviewed %}
+                            <span class="badge bg-success">You've already reviewed this company</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Company Overview -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5><i class="fas fa-info-circle me-2"></i>Company Information</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>🏢 Industry:</strong> {{ company.industry or 'Not specified' }}</p>
+                                                <p><strong>👤 Contact:</strong> {{ company.contact_person or 'Not specified' }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                {% if company.avg_rating %}
+                                                <p><strong>⭐ Overall Rating:</strong></p>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="text-warning fs-5 me-2">
+                                                        {% for i in range(5) %}
+                                                            {% if i < company.avg_rating|round|int %}★{% else %}☆{% endif %}
+                                                        {% endfor %}
+                                                    </span>
+                                                    <span class="ms-2">
+                                                        <strong>{{ "%.1f"|format(company.avg_rating) }}</strong> 
+                                                        <small class="text-muted">({{ company.review_count }} review{% if company.review_count != 1 %}s{% endif %})</small>
+                                                    </span>
+                                                </div>
+                                                {% else %}
+                                                <p><strong>⭐ Overall Rating:</strong> <span class="text-muted">No reviews yet</span></p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-warning text-dark">
+                                    <div class="card-body text-center">
+                                        <h6><i class="fas fa-lightbulb me-2"></i>Review This Company</h6>
+                                        <p class="small mb-2">Help other job seekers by sharing your experience</p>
+                                        {% if session.role == 'job_seeker' %}
+                                            {% if not user_has_reviewed %}
+                                            <a href="/company/{{ company.employer_id }}/add-review" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-plus me-1"></i>Add Review
+                                            </a>
+                                            {% else %}
+                                            <span class="badge bg-success">Review Submitted</span>
+                                            {% endif %}
+                                        {% else %}
+                                        <small class="text-muted">Login as job seeker to review</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reviews Section -->
+                        <h5 class="mb-3"><i class="fas fa-star me-2"></i>
+                            Company Reviews 
+                            {% if reviews %}
+                            <span class="badge bg-primary">{{ reviews|length }} review{% if reviews|length != 1 %}s{% endif %}</span>
+                            {% endif %}
+                        </h5>
+
+                        {% if reviews %}
+                            {% for review in reviews %}
+                            <div class="card mb-4 review-card">
+                                <div class="card-body">
+                                    <!-- Review Header -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="card-title mb-1">{{ review.review_title }}</h6>
+                                            <p class="card-text text-muted mb-1">
+                                                <small>
+                                                    <i class="fas fa-user me-1"></i>
+                                                    {{ review.display_name }} 
+                                                    {% if review.job_title %}• {{ review.job_title }}{% endif %}
+                                                    • <i class="fas fa-calendar me-1"></i>{{ review.created_date.strftime('%B %d, %Y') }}
+                                                </small>
+                                            </p>
+                                        </div>
+                                        <div class="text-warning fs-5">
+                                            {% for i in range(5) %}
+                                                {% if i < review.rating %}★{% else %}☆{% endif %}
+                                            {% endfor %}
+                                            <span class="text-dark ms-1 small">({{ review.rating }}/5)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Review Text -->
+                                    <p class="card-text mb-3">{{ review.review_text }}</p>
+                                    
+                                    <!-- Pros & Cons -->
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="alert alert-success border-0">
+                                                <h6 class="alert-heading mb-2"><i class="fas fa-thumbs-up me-2"></i>Pros</h6>
+                                                <p class="mb-0">{{ review.pros }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="alert alert-danger border-0">
+                                                <h6 class="alert-heading mb-2"><i class="fas fa-thumbs-down me-2"></i>Cons</h6>
+                                                <p class="mb-0">{{ review.cons }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Review Metadata -->
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            Posted {{ review.created_date.strftime('%b %d, %Y') }}
+                                        </small>
+                                        {% if review.is_anonymous %}
+                                        <span class="badge bg-secondary">Anonymous Review</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Empty State -->
+                            <div class="text-center py-5">
+                                <i class="fas fa-star fa-4x text-muted mb-3"></i>
+                                <h4 class="text-muted">No reviews yet</h4>
+                                <p class="text-muted mb-4">
+                                    This company doesn't have any reviews yet. Be the first to share your experience 
+                                    and help other job seekers make informed decisions.
+                                </p>
+                                {% if session.role == 'job_seeker' %}
+                                <a href="/company/{{ company.employer_id }}/add-review" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-edit me-2"></i>Write First Review
+                                </a>
+                                {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Login as a job seeker to write a review about your experience with this company.
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Back to Jobs -->
+                        <div class="text-center mt-4">
+                            <a href="/jobs" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Job Listings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review Guidelines -->
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Review Guidelines</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>✅ Helpful Reviews:</h6>
+                                <ul class="small">
+                                    <li>Share specific experiences and examples</li>
+                                    <li>Focus on facts and your personal experience</li>
+                                    <li>Be honest and constructive</li>
+                                    <li>Include both positive and negative aspects</li>
+                                    <li>Respect privacy and confidentiality</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>❌ Unhelpful Reviews:</h6>
+                                <ul class="small">
+                                    <li>Personal attacks or offensive language</li>
+                                    <li>False or misleading information</li>
+                                    <li>Confidential company information</li>
+                                    <li>Reviews not based on personal experience</li>
+                                    <li>Spam or promotional content</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .review-card {
+            border-left: 4px solid #007bff;
+            transition: transform 0.2s;
+        }
+        .review-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card-header.bg-info {
+            background: linear-gradient(135deg, #17a2b8, #138496) !important;
+        }
+    </style>
+</body>
+</html> 

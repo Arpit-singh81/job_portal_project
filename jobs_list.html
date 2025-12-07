@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Jobs - Job Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .search-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .job-card {
+            border-left: 4px solid #007bff;
+            transition: transform 0.2s;
+        }
+        .job-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .company-rating {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+            <div class="container">
+                <a class="navbar-brand" href="/">🎯 Job Portal</a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link active" href="/jobs">Browse Jobs</a>
+                    {% if session.role == 'job_seeker' %}
+                    <a class="nav-link" href="/my-applications">My Applications</a>
+                    <a class="nav-link" href="/my-interviews">My Interviews</a>
+                    <a class="nav-link" href="/upload-resume">Upload Resume</a>
+                    {% elif session.role == 'employer' %}
+                    <a class="nav-link" href="/my-jobs">My Jobs</a>
+                    <a class="nav-link" href="/add-job">Post Job</a>
+                    <a class="nav-link" href="/my-interviews">Scheduled Interviews</a>
+                    {% endif %}
+                </div>
+                <div class="navbar-nav">
+                    <span class="navbar-text text-white me-3">
+                        <strong>{{ session.full_name }}</strong> ({{ session.role|replace('_', ' ')|title }})
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <button class="btn btn-outline-light btn-sm">🚪 Logout</button>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Smart Search Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card search-card">
+                    <div class="card-body">
+                        <h4 class="card-title text-white">🔍 Find Your Dream Job</h4>
+                        <form method="GET" action="/jobs" class="row g-3">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">📝</span>
+                                    <input type="text" class="form-control" id="search" name="search" 
+                                           placeholder="Job title, skills, or keywords..." 
+                                           value="{{ request.args.get('search', '') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">🏢</span>
+                                    <input type="text" class="form-control" id="company" name="company" 
+                                           placeholder="Company name..." 
+                                           value="{{ request.args.get('company', '') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">📍</span>
+                                    <input type="text" class="form-control" id="location" name="location" 
+                                           placeholder="City or location..." 
+                                           value="{{ request.args.get('location', '') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-light w-100">Search</button>
+                            </div>
+                        </form>
+                        
+                        <!-- Quick Filters -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <small class="text-white-50">Quick filters:</small>
+                                    <a href="/jobs?job_type=remote" class="badge bg-info text-decoration-none">🏠 Remote</a>
+                                    <a href="/jobs?job_type=full_time" class="badge bg-success text-decoration-none">💼 Full-time</a>
+                                    <a href="/jobs?job_type=part_time" class="badge bg-warning text-decoration-none">⏰ Part-time</a>
+                                    <a href="/jobs?job_type=internship" class="badge bg-primary text-decoration-none">🎓 Internship</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Filters Sidebar -->
+            <div class="col-md-3">
+                <div class="filter-section">
+                    <h5>🔧 Filters</h5>
+                    
+                    <!-- Job Type Filter -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Job Type</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="job_type" value="full_time" id="full_time"
+                                   {% if 'full_time' in request.args.getlist('job_type') %}checked{% endif %}>
+                            <label class="form-check-label" for="full_time">💼 Full-time</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="job_type" value="part_time" id="part_time"
+                                   {% if 'part_time' in request.args.getlist('job_type') %}checked{% endif %}>
+                            <label class="form-check-label" for="part_time">⏰ Part-time</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="job_type" value="contract" id="contract"
+                                   {% if 'contract' in request.args.getlist('job_type') %}checked{% endif %}>
+                            <label class="form-check-label" for="contract">📑 Contract</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="job_type" value="internship" id="internship"
+                                   {% if 'internship' in request.args.getlist('job_type') %}checked{% endif %}>
+                            <label class="form-check-label" for="internship">🎓 Internship</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="job_type" value="remote" id="remote"
+                                   {% if 'remote' in request.args.getlist('job_type') %}checked{% endif %}>
+                            <label class="form-check-label" for="remote">🏠 Remote</label>
+                        </div>
+                    </div>
+
+                    <!-- Experience Level -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Experience Level</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="experience" value="entry" id="entry">
+                            <label class="form-check-label" for="entry">👶 Entry Level</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="experience" value="mid" id="mid">
+                            <label class="form-check-label" for="mid">👨‍💼 Mid Level</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="experience" value="senior" id="senior">
+                            <label class="form-check-label" for="senior">👴 Senior Level</label>
+                        </div>
+                    </div>
+
+                    <!-- Salary Range -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Salary Range</strong></label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" placeholder="Min" name="salary_min" 
+                                   value="{{ request.args.get('salary_min', '') }}">
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" placeholder="Max" name="salary_max" 
+                                   value="{{ request.args.get('salary_max', '') }}">
+                        </div>
+                    </div>
+
+                    <button type="button" id="applyFilters" class="btn btn-primary w-100">Apply Filters</button>
+                    <a href="/jobs" class="btn btn-outline-secondary w-100 mt-2">Clear All</a>
+                </div>
+            </div>
+
+            <!-- Jobs List -->
+            <div class="col-md-9">
+                <!-- Results Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>📋 Available Jobs 
+                        {% if request.args.get('search') or request.args.get('company') or request.args.get('location') %}
+                        <small class="text-muted">(Filtered results)</small>
+                        {% endif %}
+                    </h4>
+                    <span class="badge bg-primary">{{ jobs|length }} jobs found</span>
+                </div>
+
+                {% if jobs %}
+                    {% for job in jobs %}
+                    <div class="card job-card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="card-title">{{ job.title }}</h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">
+                                        🏢 {{ job.company_name }}
+                                        {% if job.avg_rating %}
+                                        <span class="company-rating">
+                                            {% for i in range(5) %}
+                                                {% if i < job.avg_rating|int %}⭐{% else %}☆{% endif %}
+                                            {% endfor %}
+                                            ({{ job.review_count or 0 }})
+                                        </span>
+                                        {% endif %}
+                                    </h6>
+                                    <p class="card-text">
+                                        <span class="badge bg-info">{{ job.job_type|replace('_', ' ')|title }}</span>
+                                        <span class="badge bg-secondary">📍 {{ job.location }}</span>
+                                        {% if job.salary_range_min %}
+                                        <span class="badge bg-success">💰 ${{ job.salary_range_min }} - ${{ job.salary_range_max }}</span>
+                                        {% endif %}
+                                    </p>
+                                    <p class="card-text">{{ job.description[:200] }}{% if job.description|length > 200 %}...{% endif %}</p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="mb-2">
+                                        <small class="text-muted">Posted: {{ job.posted_date.strftime('%b %d, %Y') }}</small>
+                                    </div>
+                                    {% if session.role == 'job_seeker' %}
+                                        {% if job.has_applied %}
+                                        <span class="badge bg-success mb-2">✅ Applied</span>
+                                        {% else %}
+                                        <a href="/apply-job/{{ job.job_id }}" class="btn btn-success mb-2">Apply Now</a>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Login as job seeker to apply</span>
+                                    {% endif %}
+                                    <br>
+                                    <a href="/company/{{ job.employer_id }}/reviews" class="btn btn-outline-info btn-sm mt-1">
+                                        👀 View Company Reviews
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <h5>😔 No jobs found</h5>
+                        <p class="text-muted">Try adjusting your search criteria or filters</p>
+                        <a href="/jobs" class="btn btn-primary">Show All Jobs</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Filter application
+        document.getElementById('applyFilters').addEventListener('click', function() {
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = '/jobs';
+            
+            // Add search parameters
+            const searchParams = new URLSearchParams(window.location.search);
+            ['search', 'company', 'location', 'salary_min', 'salary_max'].forEach(param => {
+                if (searchParams.get(param)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = param;
+                    input.value = searchParams.get(param);
+                    form.appendChild(input);
+                }
+            });
+            
+            // Add job type filters
+            document.querySelectorAll('input[name="job_type"]:checked').forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'job_type';
+                input.value = checkbox.value;
+                form.appendChild(input);
+            });
+            
+            // Add experience filters
+            document.querySelectorAll('input[name="experience"]:checked').forEach(checkbox => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'experience';
+                input.value = checkbox.value;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+        });
+
+        // Quick search suggestions
+        const searchInput = document.getElementById('search');
+        const companyInput = document.getElementById('company');
+        const locationInput = document.getElementById('location');
+
+        // Add common skill suggestions
+        searchInput.addEventListener('focus', function() {
+            this.setAttribute('list', 'skill-suggestions');
+        });
+
+        // Add common company suggestions
+        companyInput.addEventListener('focus', function() {
+            this.setAttribute('list', 'company-suggestions');
+        });
+
+        // Add common location suggestions
+        locationInput.addEventListener('focus', function() {
+            this.setAttribute('list', 'location-suggestions');
+        });
+    </script>
+
+    <!-- Data lists for suggestions -->
+    <datalist id="skill-suggestions">
+        <option value="Python">
+        <option value="JavaScript">
+        <option value="Java">
+        <option value="React">
+        <option value="Node.js">
+        <option value="SQL">
+        <option value="AWS">
+        <option value="Machine Learning">
+        <option value="Data Analysis">
+        <option value="Web Development">
+        <option value="Mobile Development">
+        <option value="UI/UX Design">
+        <option value="Project Management">
+    </datalist>
+
+    <datalist id="company-suggestions">
+        <option value="Google">
+        <option value="Microsoft">
+        <option value="Amazon">
+        <option value="Apple">
+        <option value="Facebook">
+        <option value="Netflix">
+        <option value="Tech Corp">
+        <option value="Innovate Inc">
+        <option value="StartUp XYZ">
+    </datalist>
+
+    <datalist id="location-suggestions">
+        <option value="New York">
+        <option value="San Francisco">
+        <option value="London">
+        <option value="Berlin">
+        <option value="Tokyo">
+        <option value="Remote">
+        <option value="Bangalore">
+        <option value="Sydney">
+        <option value="Toronto">
+    </datalist>
+</body>
+</html> 

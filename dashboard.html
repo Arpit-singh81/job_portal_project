@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Job Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .user-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .nav-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+        }
+        .quick-action-card {
+            transition: transform 0.2s;
+        }
+        .quick-action-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Navigation with Logout -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+            <div class="container">
+                <a class="navbar-brand" href="/">🎯 Job Portal</a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link" href="/jobs">Browse Jobs</a>
+                    {% if session.role == 'job_seeker' %}
+                    <a class="nav-link" href="/my-applications">My Applications</a>
+                    <a class="nav-link" href="/my-interviews">My Interviews</a>
+                    <a class="nav-link" href="/my-profile">My Profile</a>
+                    <a class="nav-link" href="/upload-resume">Upload Resume</a>
+                    <a class="nav-link" href="/notifications">Notifications</a>
+                    {% elif session.role == 'employer' %}
+                    <a class="nav-link" href="/my-jobs">My Jobs</a>
+                    <a class="nav-link" href="/add-job">Post Job</a>
+                    <a class="nav-link" href="/my-interviews">Scheduled Interviews</a>
+                    {% endif %}
+                </div>
+                <div class="navbar-nav">
+                    <span class="navbar-text text-white me-3">
+                        <strong>{{ session.full_name }}</strong> ({{ session.role|replace('_', ' ')|title }})
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <button class="btn btn-outline-light btn-sm">🚪 Logout</button>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- User Info -->
+        <div class="user-info">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4>Welcome back, {{ session.full_name }}! 👋</h4>
+                    <p class="mb-1">You are logged in as <strong>{{ session.role|replace('_', ' ')|title }}</strong></p>
+                    {% if session.location %}
+                    <p class="mb-0"><small>📍 {{ session.location }}</small></p>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <p class="mb-1">{{ session.email }}</p>
+                    <a href="/logout" class="btn btn-light btn-sm">
+                        🚪 Switch Account
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simplified Welcome Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h4>👋 Welcome to Job Portal!</h4>
+                    <p class="mb-0">
+                        {% if session.role == 'job_seeker' %}
+                        Start exploring jobs, update your profile, and track your applications.
+                        {% else %}
+                        Manage your job postings, review applicants, and schedule interviews.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Specific Content -->
+        <div class="row mt-4">
+            {% if session.role == 'job_seeker' and user_applications %}
+            <div class="col-md-6">
+                <div class="nav-card">
+                    <h5>📝 My Recent Applications</h5>
+                    {% for app in user_applications %}
+                    <div class="border-bottom py-2">
+                        <strong>{{ app.title }}</strong><br>
+                        <small>Applied: {{ app.applied_date.strftime('%Y-%m-%d') }}</small>
+                        <span class="badge bg-{{ 'warning' if app.status == 'applied' else 'success' }} float-end">
+                            {{ app.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    <a href="/my-applications" class="btn btn-outline-primary btn-sm mt-2">View All Applications</a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if session.role == 'employer' and user_jobs %}
+            <div class="col-md-6">
+                <div class="nav-card">
+                    <h5>💼 My Job Postings</h5>
+                    {% for job in user_jobs %}
+                    <div class="border-bottom py-2">
+                        <strong>{{ job.title }}</strong><br>
+                        <small>{{ job.applicant_count }} applicants • Posted: {{ job.posted_date.strftime('%Y-%m-%d') }}</small>
+                        {% if job.applicant_count > 0 %}
+                        <a href="/job-applicants/{{ job.job_id }}" class="btn btn-info btn-sm float-end">View Applicants</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <a href="/my-jobs" class="btn btn-outline-primary btn-sm mt-2">Manage All Jobs</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="col-md-6">
+                <div class="nav-card quick-action-card">
+                    <h5>🚀 Quick Actions</h5>
+                    <div class="d-grid gap-2">
+                        {% if session.role == 'job_seeker' %}
+                        <a href="/jobs" class="btn btn-primary">🔍 Browse Jobs</a>
+                        <a href="/my-applications" class="btn btn-info">📋 My Applications</a>
+                        <a href="/my-profile" class="btn btn-warning">👤 My Profile</a>
+                        <a href="/my-interviews" class="btn btn-warning">🗓️ My Interviews</a>
+                        <a href="/upload-resume" class="btn btn-success">📄 Upload Resume</a>
+                        <a href="/notifications" class="btn btn-secondary">🔔 Notifications</a>
+                        {% elif session.role == 'employer' %}
+                        <a href="/add-job" class="btn btn-success">➕ Post New Job</a>
+                        <a href="/my-jobs" class="btn btn-primary">📊 Manage Jobs</a>
+                        <a href="/my-interviews" class="btn btn-warning">🗓️ Scheduled Interviews</a>
+                        {% endif %}
+                        <a href="/logout" class="btn btn-outline-secondary">🔄 Switch Account</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Jobs for Everyone -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>🔥 Recent Job Postings</h5>
+                        <a href="/jobs" class="btn btn-primary btn-sm">View All Jobs</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_jobs %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Company</th>
+                                        <th>Location</th>
+                                        <th>Type</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for job in recent_jobs %}
+                                    <tr>
+                                        <td>{{ job.title }}</td>
+                                        <td>{{ job.company_name }}</td>
+                                        <td>{{ job.location }}</td>
+                                        <td><span class="badge bg-info">{{ job.job_type }}</span></td>
+                                        <td>
+                                            {% if session.role == 'job_seeker' %}
+                                            <a href="/apply-job/{{ job.job_id }}" class="btn btn-success btn-sm">Apply</a>
+                                            {% else %}
+                                            <span class="text-muted">Login as job seeker to apply</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">No jobs found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

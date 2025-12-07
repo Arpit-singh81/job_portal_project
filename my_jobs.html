@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Jobs - Job Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- Navigation with Logout -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+            <div class="container">
+                <a class="navbar-brand" href="/">🎯 Job Portal</a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link" href="/my-jobs">My Jobs</a>
+                    <a class="nav-link" href="/add-job">Post Job</a>
+                </div>
+                <div class="navbar-nav">
+                    <span class="navbar-text text-white me-3">
+                        {{ session.full_name }} (Employer)
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <button class="btn btn-outline-light btn-sm">🚪 Logout</button>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>💼 My Job Postings</h2>
+            <div>
+                <a href="/add-job" class="btn btn-primary">➕ Post New Job</a>
+                <a href="/dashboard" class="btn btn-secondary">📊 Dashboard</a>
+            </div>
+        </div>
+
+        {% if jobs %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Title</th>
+                        <th>Applicants</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                        <th>Posted</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td><strong>{{ job.title }}</strong></td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if job.applicant_count > 0 else 'secondary' }}">
+                                {{ job.applicant_count }} applicant{% if job.applicant_count != 1 %}s{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ job.location }}</td>
+                        <td><span class="badge bg-info">{{ job.job_type }}</span></td>
+                        <td>{{ job.posted_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if job.status == 'active' else 'secondary' }}">
+                                {{ job.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if job.applicant_count > 0 %}
+                            <a href="/job-applicants/{{ job.job_id }}" class="btn btn-info btn-sm">View Applicants</a>
+                            {% else %}
+                            <span class="text-muted">No applicants yet</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <h4>No jobs posted yet!</h4>
+            <p>Start by posting your first job opportunity.</p>
+            <a href="/add-job" class="btn btn-primary">Post Your First Job</a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html> 

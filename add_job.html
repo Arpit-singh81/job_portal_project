@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post New Job - Job Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+            <div class="container">
+                <a class="navbar-brand" href="/">🎯 Job Portal</a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link" href="/jobs">Browse Jobs</a>
+                    {% if session.role == 'job_seeker' %}
+                    <a class="nav-link" href="/my-applications">My Applications</a>
+                    <a class="nav-link" href="/my-interviews">My Interviews</a>
+                    <a class="nav-link" href="/my-profile">My Profile</a>
+                    <a class="nav-link" href="/upload-resume">Upload Resume</a>
+                    <a class="nav-link" href="/notifications">Notifications</a>
+                    {% elif session.role == 'employer' %}
+                    <a class="nav-link" href="/my-jobs">My Jobs</a>
+                    <a class="nav-link active" href="/add-job">Post Job</a>
+                    <a class="nav-link" href="/my-interviews">Scheduled Interviews</a>
+                    {% endif %}
+                </div>
+                <div class="navbar-nav">
+                    <span class="navbar-text text-white me-3">
+                        <strong>{{ session.full_name }}</strong> ({{ session.role|replace('_', ' ')|title }})
+                    </span>
+                    <a class="nav-link" href="/logout">
+                        <button class="btn btn-outline-light btn-sm">🚪 Logout</button>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="fas fa-briefcase me-2"></i>Post New Job</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Job Posting Tips -->
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-lightbulb me-2"></i>Job Posting Tips:</h6>
+                            <ul class="mb-2">
+                                <li>Use a clear, specific job title</li>
+                                <li>Provide detailed job description and requirements</li>
+                                <li>Include salary range to attract more candidates</li>
+                                <li>List relevant skills and qualifications</li>
+                            </ul>
+                        </div>
+
+                        <form method="POST">
+                            <!-- Job Title -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Job Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-lg" name="title" 
+                                       placeholder="e.g., Senior Software Engineer, Marketing Manager, Data Analyst" required>
+                                <div class="form-text">Be specific about the role and level</div>
+                            </div>
+                            
+                            <!-- Job Description -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Job Description <span class="text-danger">*</span></label>
+                                <textarea class="form-control" name="description" rows="5" 
+                                          placeholder="Describe the role, responsibilities, and what makes this position exciting..." required></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Describe the day-to-day responsibilities and key objectives
+                                </div>
+                            </div>
+                            
+                            <!-- Requirements -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Requirements & Qualifications</label>
+                                <textarea class="form-control" name="requirements" rows="4" 
+                                          placeholder="List the required qualifications, experience, and education..."></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-graduation-cap me-1"></i>
+                                    Specify must-have qualifications and nice-to-have skills
+                                </div>
+                            </div>
+                            
+                            <!-- Location & Job Type -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Location <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="location" 
+                                               placeholder="e.g., New York, NY or Remote" required>
+                                        <div class="form-text">City, State or Remote work options</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Job Type <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="job_type" required>
+                                            <option value="">Select Job Type</option>
+                                            <option value="full_time">Full Time</option>
+                                            <option value="part_time">Part Time</option>
+                                            <option value="contract">Contract</option>
+                                            <option value="internship">Internship</option>
+                                            <option value="remote">Remote</option>
+                                            <option value="hybrid">Hybrid</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Salary Range -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Salary Range Min ($)</label>
+                                        <input type="number" class="form-control" name="salary_min" 
+                                               placeholder="50000" min="0" step="1000">
+                                        <div class="form-text">Annual salary in USD</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Salary Range Max ($)</label>
+                                        <input type="number" class="form-control" name="salary_max" 
+                                               placeholder="80000" min="0" step="1000">
+                                        <div class="form-text">Leave blank for 'Negotiable'</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Salary Validation -->
+                            <div class="alert alert-warning d-none" id="salaryWarning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Maximum salary should be greater than minimum salary.
+                            </div>
+                            
+                            <!-- Required Skills -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Required Skills</label>
+                                <input type="text" class="form-control" name="skills" 
+                                       placeholder="python, javascript, sql, project management, communication">
+                                <div class="form-text">
+                                    <i class="fas fa-tags me-1"></i>
+                                    Separate multiple skills with commas
+                                </div>
+                            </div>
+
+                            <!-- Company Info (if available) -->
+                            <div class="alert alert-primary">
+                                <h6><i class="fas fa-building me-2"></i>Company Information</h6>
+                                <p class="mb-0">This job will be posted under your company profile. Candidates will see your company name and details.</p>
+                            </div>
+                            
+                            <!-- Submit Buttons -->
+                            <div class="d-grid gap-2 d-md-flex">
+                                <button type="submit" class="btn btn-success btn-lg flex-fill">
+                                    <i class="fas fa-paper-plane me-2"></i>Post Job
+                                </button>
+                                <a href="/my-jobs" class="btn btn-outline-secondary btn-lg flex-fill">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Job Posting Guidelines -->
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-book me-2"></i>Job Posting Guidelines</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>✅ Do:</h6>
+                                <ul class="small">
+                                    <li>Use clear, unbiased job titles</li>
+                                    <li>Provide accurate salary information</li>
+                                    <li>List specific requirements</li>
+                                    <li>Include company culture details</li>
+                                    <li>Specify remote work options clearly</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>❌ Don't:</h6>
+                                <ul class="small">
+                                    <li>Use gender-coded language</li>
+                                    <li>Require unnecessary qualifications</li>
+                                    <li>Be vague about responsibilities</li>
+                                    <li>Hide salary information</li>
+                                    <li>Use discriminatory language</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Salary validation
+        const salaryMin = document.querySelector('input[name="salary_min"]');
+        const salaryMax = document.querySelector('input[name="salary_max"]');
+        const salaryWarning = document.getElementById('salaryWarning');
+
+        function validateSalary() {
+            const min = parseInt(salaryMin.value) || 0;
+            const max = parseInt(salaryMax.value) || 0;
+            
+            if (min > 0 && max > 0 && min > max) {
+                salaryWarning.classList.remove('d-none');
+                return false;
+            } else {
+                salaryWarning.classList.add('d-none');
+                return true;
+            }
+        }
+
+        salaryMin?.addEventListener('input', validateSalary);
+        salaryMax?.addEventListener('input', validateSalary);
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (!validateSalary()) {
+                e.preventDefault();
+                alert('Please fix the salary range before submitting.');
+                return false;
+            }
+
+            const title = document.querySelector('input[name="title"]').value;
+            if (title.length < 5) {
+                e.preventDefault();
+                alert('Please enter a more descriptive job title (at least 5 characters).');
+                return false;
+            }
+
+            const description = document.querySelector('textarea[name="description"]').value;
+            if (description.length < 50) {
+                e.preventDefault();
+                alert('Please provide a more detailed job description (at least 50 characters).');
+                return false;
+            }
+        });
+
+        // Character counter for description
+        const description = document.querySelector('textarea[name="description"]');
+        if (description) {
+            const counter = document.createElement('div');
+            counter.className = 'form-text text-end';
+            counter.id = 'descCounter';
+            counter.textContent = '0 characters';
+            description.parentNode.appendChild(counter);
+
+            description.addEventListener('input', function() {
+                const length = this.value.length;
+                const counterElement = document.getElementById('descCounter');
+                counterElement.textContent = `${length} characters`;
+                
+                if (length < 50) {
+                    counterElement.className = 'form-text text-end text-danger';
+                } else if (length > 2000) {
+                    counterElement.className = 'form-text text-end text-warning';
+                } else {
+                    counterElement.className = 'form-text text-end text-success';
+                }
+            });
+        }
+    </script>
+</body>
+</html> 
